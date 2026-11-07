@@ -1,0 +1,6 @@
+{
+  "name": "Portal Pengurusan Seni Muzik SSeMJ",
+  "description": "Papan Pemuka Rasmi Aplikasi Pengurusan Seni Muzik Sekolah Seni Malaysia Johor (SSeMJ) untuk capaian pantas data murid, e-kehadiran amali, pengurusan aset instrumen, asrama, e-RPH, PLC dan Sk@S.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

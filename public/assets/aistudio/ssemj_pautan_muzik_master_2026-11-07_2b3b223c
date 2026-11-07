@@ -1,0 +1,18 @@
+Kategori,Nama Pautan,URL,Keterangan,Label Badge,Ikon,Warna,Favourite,Aktif,ID
+PLC,JANA PLC,https://fastidious-mermaid-d48b79.netlify.app/,Jana PLC menggunakan Ai,JanaPLC,BookOpen,blue,TIDAK,YA,link-1793965279805
+Kesenian & Muzik,Skor Gubahan Muzik,https://drive.google.com/drive/folders/1G6UE_o_omsddD0Mp7R9jnGzpyiTarviR?usp=drive_link,Aplikasi pengurusan Seni Muzik Sekolah Seni Malaysia Johor.,Skor Muzik,Music,blue,TIDAK,YA,link-1793897880666
+PLC,PLC Ai Tools,https://drive.google.com/drive/folders/1zSrWgreRkAmH_zmfAdE2JczLIKfG0b6p?usp=drive_link,PLC AI Tools,AI Tools,Share2,orange,TIDAK,YA,link-1793896265316
+Akademik & PdP,e-RPH,https://ssemjdzurrirph.vercel.app/,Sistem penyediaan dan penghantaran Rancangan Pengajaran Harian digital guru Muzik & Akademik kepada Pentadbir. dzurrihensem,PdP Guru,FileSpreadsheet,purple,YA,YA,link-erph
+Pentadbiran & Guru,Takwim 2027,https://docs.google.com/document/d/1r0QQClwbYp5m54uxsTk8xSX15I2kQKpY/edit,Takwim 2927,Takwim 2027,Building,cyan,YA,YA,link-1793894516801
+Appsheet,Aktiviti Seni Muzik Appsheet,https://www.appsheet.com/template/AppDef?appName=AKTIVITISENIMUZIK-2756464-24-11-23&appId=29bd177c-5f7e-42cc-bc9e-e73ad37ee137&quickStart=False#Data.Tables,Appsheet Aktiviti Muzik,apps Aktiviti Muzik,Sparkles,blue,YA,YA,link-1793896027368
+Appsheet,Pinjaman dan Pulang Alat Muzik,https://www.appsheet.com/template/AppDef?appName=AsetSeniMuzik-2756464-24-11-16&appId=2a02fd04-6c99-4f67-9171-bfaca019e597&quickStart=False#Data.Columns.PINJAM,Hanya pengguna yang telah diinvite oleh Admin sahaja boleh menggunakan apps ini,Apps Aset Muzik,Headphones,rose,YA,YA,link-1793892976244
+Kokurikulum,Kokurikulum,https://ekoku.vercel.app/,Maklumat Kokurikulum SSeMJ,e-Koku,Music,indigo,TIDAK,YA,link-1793892509377
+Hal Ehwal Murid,Maklumat Murid,https://muridssemj.vercel.app/,"Pangkalan data profil murid pengkhususan muzik, rekod instrumen utama, biodata, pencapaian serta maklumat waris.",Pangkalan Data,Users,blue,YA,YA,link-maklumat-murid
+Kesenian & Muzik,Rekod Kehadiran,https://kehadiran-kesenian.vercel.app/,"e-Kehadiran harian & mingguan kelas teori muzik, amali solo, latihan seksyen orkestra, gamelan dan ensembel.",Kehadiran Harian,ClipboardCheck,emerald,YA,YA,link-kehadiran-kesenian
+Kokurikulum,Aktiviti Muzik,https://aktivitimuzik.vercel.app/,"Takwim persembahan rasmi, Konsert Kesenian Tahunan, masterclass jemputan, pertandingan dan bengkel teknikal.",Takwim & Konsert,Calendar,rose,YA,YA,link-aktiviti-program
+Kesenian & Muzik,Jana OPR,https://charming-palmier-b0307e.netlify.app/,Jana OPR dengan pantas,OPR,Music,amber,YA,YA,link-1793891823846
+Kesenian & Muzik,Aset Seni Muzik,https://aset-ssemj.vercel.app/,"Inventori instrumen muzik (piano, gesek, tiupan, perkusi, gamelan), rekod peminjaman alat, bilik studio dan PA sistem.",Inventori & Studio,Music,amber,TIDAK,YA,link-pengurusan-aset
+Hal Ehwal Murid,Asrama,https://asrama-ssemj.vercel.app/,"Sistem pengurusan asrama murid muzik, rekod keluar masuk (outing), jadual bilik latihan malam dan kebajikan.",e-Asrama,Building,indigo,TIDAK,YA,link-pengurusan-asrama
+PLC,PLC PANITIA,https://drive.google.com/drive/folders/12fiUXSLr5-qcncs2HonojU-0IpS9tTkF,"Pelaporan Komuniti Pembelajaran Profesional guru seni muzik, Lesson Study, perkongsian pedagogi amali dan bahan skor.",Pembangunan Staf,Layers,cyan,TIDAK,YA,link-plc
+Sk@S,Sk@S,https://skas.moe.gov.my/,"Portal Sistem Kesenian Sekolah Seni (Sk@S KPM) bagi penilaian berterusan, modul kemahiran bakat dan pentaksiran murid.",Portal KPM,Award,orange,TIDAK,YA,link-skas
+OPR,OPR,https://docs.google.com/document/d/contoh-opr-ssemj-muzik/edit,"Pelaporan Satu Muka Surat (One Page Report) bagi setiap bengkel, aktiviti, dan konsert muzik SSeMJ.",Laporan Program,FileSpreadsheet,emerald,TIDAK,YA,link-opr
