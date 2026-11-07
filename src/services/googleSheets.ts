@@ -306,7 +306,7 @@ export async function appendModuleToGoogleSheet(module: AppModule, customSheetId
  * Initiates Google OAuth Token Client (Google Identity Services)
  */
 export function requestGoogleAccessToken(onSuccess: (token: string) => void, onError?: (err: any) => void): void {
-  const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
+  const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '433369615577-7k94crhhn35nkq7ftqamettgvm7ulkj2.apps.googleusercontent.com';
 
   if (!clientId) {
     if (onError) onError(new Error('VITE_GOOGLE_CLIENT_ID tidak ditemui dalam konfigurasi sistem.'));

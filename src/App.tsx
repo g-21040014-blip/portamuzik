@@ -244,6 +244,30 @@ export default function App() {
     return list.filter((c) => !isBannedCategory(c.value) && !isBannedCategory(c.label));
   }, [categoriesList, links]);
 
+  // Compute all available subcategories across all links and common presets
+  const allSubCategories = useMemo(() => {
+    const defaultSubs = [
+      'Kelab & Persatuan',
+      'Sukan & Permainan',
+      'Badan Beruniform',
+      'Peperiksaan & Bank Soalan',
+      'Skor Digital',
+      'Muzik Tradisional',
+      'Muzik Moden',
+      'Tingkatan 1',
+      'Tingkatan 2',
+      'Tingkatan 3',
+      'Tingkatan 4',
+      'Tingkatan 5',
+    ];
+    const fromLinks = links
+      .map((l) => l.subCategory?.trim())
+      .filter((s): s is string => Boolean(s && s.length > 0));
+
+    const combined = Array.from(new Set([...defaultSubs, ...fromLinks]));
+    return combined.sort((a, b) => a.localeCompare(b, 'ms'));
+  }, [links]);
+
   // Category Manager Handlers (Tambah, Edit, Padam)
   const handleAddCategory = (newCat: string) => {
     const trimmed = newCat.trim();
@@ -1226,6 +1250,7 @@ export default function App() {
         isOpen={isEditorOpen}
         linkToEdit={linkToEdit}
         availableCategories={allCategoryItems.map((c) => c.value)}
+        availableSubCategories={allSubCategories}
         onAddNewCategory={handleAddNewCategory}
         onClose={() => {
           setIsEditorOpen(false);

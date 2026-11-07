@@ -10,24 +10,40 @@ interface LinkEditorModalProps {
   isOpen: boolean;
   linkToEdit: AppLink | null;
   availableCategories?: string[];
+  availableSubCategories?: string[];
   onClose: () => void;
   onSave: (link: AppLink) => void;
   onAddNewCategory?: (newCategory: string) => void;
+  onAddNewSubCategory?: (newSubCategory: string) => void;
 }
 
 export const LinkEditorModal: React.FC<LinkEditorModalProps> = ({
   isOpen,
   linkToEdit,
   availableCategories = [],
+  availableSubCategories = [],
   onClose,
   onSave,
   onAddNewCategory,
+  onAddNewSubCategory,
 }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<CategoryType>('Kesenian & Muzik');
   const [subCategory, setSubCategory] = useState('');
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [isAddingNewSubCategory, setIsAddingNewSubCategory] = useState(false);
+  const [newSubCategoryInput, setNewSubCategoryInput] = useState('');
+  const [customSubCategories, setCustomSubCategories] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('ssemj_custom_subcategories_v2');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
   const [iconName, setIconName] = useState('Music');
@@ -50,6 +66,54 @@ export const LinkEditorModal: React.FC<LinkEditorModalProps> = ({
     return CATEGORIES.filter((c) => c.value !== 'Semua' && !isBanned(c.value)).map((c) => c.value);
   }, [availableCategories]);
 
+  // Compute combined subcategory options
+  const subCategoryOptions = React.useMemo(() => {
+    const defaults = [
+      'Kelab & Persatuan',
+      'Sukan & Permainan',
+      'Badan Beruniform',
+      'Peperiksaan & Bank Soalan',
+      'Skor Digital',
+      'Muzik Tradisional',
+      'Muzik Moden',
+      'Tingkatan 1',
+      'Tingkatan 2',
+      'Tingkatan 3',
+      'Tingkatan 4',
+      'Tingkatan 5',
+    ];
+    const pool = new Set<string>();
+    defaults.forEach((s) => pool.add(s));
+    (availableSubCategories || []).forEach((s) => s && pool.add(s.trim()));
+    customSubCategories.forEach((s) => s && pool.add(s.trim()));
+    if (subCategory && subCategory.trim()) {
+      pool.add(subCategory.trim());
+    }
+    return Array.from(pool).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ms'));
+  }, [availableSubCategories, customSubCategories, subCategory]);
+
+  const handleSaveNewSubCategory = () => {
+    const trimmed = newSubCategoryInput.trim();
+    if (!trimmed) {
+      setIsAddingNewSubCategory(false);
+      return;
+    }
+    if (!customSubCategories.includes(trimmed)) {
+      const nextList = [...customSubCategories, trimmed];
+      setCustomSubCategories(nextList);
+      try {
+        localStorage.setItem('ssemj_custom_subcategories_v2', JSON.stringify(nextList));
+      } catch {}
+    }
+    setSubCategory(trimmed);
+    if (onAddNewSubCategory) {
+      onAddNewSubCategory(trimmed);
+    }
+    setIsAddingNewSubCategory(false);
+    setNewSubCategoryInput('');
+    soundFx.playClick();
+  };
+
   useEffect(() => {
     if (linkToEdit) {
       setTitle(linkToEdit.title);
@@ -57,6 +121,8 @@ export const LinkEditorModal: React.FC<LinkEditorModalProps> = ({
       setSubCategory(linkToEdit.subCategory || '');
       setIsAddingNewCategory(false);
       setNewCategoryInput('');
+      setIsAddingNewSubCategory(false);
+      setNewSubCategoryInput('');
       setUrl(linkToEdit.url);
       setDescription(linkToEdit.description);
       setIconName(linkToEdit.iconName);
@@ -72,6 +138,8 @@ export const LinkEditorModal: React.FC<LinkEditorModalProps> = ({
       setSubCategory('');
       setIsAddingNewCategory(false);
       setNewCategoryInput('');
+      setIsAddingNewSubCategory(false);
+      setNewSubCategoryInput('');
       setUrl('https://');
       setDescription('');
       setIconName('Music');
@@ -110,6 +178,24 @@ export const LinkEditorModal: React.FC<LinkEditorModalProps> = ({
       }
     }
 
+    let finalSubCategory = subCategory.trim();
+    if (isAddingNewSubCategory) {
+      const trimmedNewSub = newSubCategoryInput.trim();
+      if (trimmedNewSub) {
+        finalSubCategory = trimmedNewSub;
+        if (!customSubCategories.includes(trimmedNewSub)) {
+          const nextList = [...customSubCategories, trimmedNewSub];
+          setCustomSubCategories(nextList);
+          try {
+            localStorage.setItem('ssemj_custom_subcategories_v2', JSON.stringify(nextList));
+          } catch {}
+        }
+        if (onAddNewSubCategory) {
+          onAddNewSubCategory(trimmedNewSub);
+        }
+      }
+    }
+
     let finalUrl = url.trim();
     if (!/^https?:\/\//i.test(finalUrl)) {
       finalUrl = 'https://' + finalUrl;
@@ -120,7 +206,7 @@ export const LinkEditorModal: React.FC<LinkEditorModalProps> = ({
       id: linkToEdit ? linkToEdit.id : `link-${Date.now()}`,
       title: title.trim(),
       category: finalCategory === 'Semua' ? 'Kesenian & Muzik' : finalCategory,
-      subCategory: subCategory.trim() || undefined,
+      subCategory: finalSubCategory || undefined,
       description: description.trim() || 'Aplikasi pengurusan Seni Muzik Sekolah Seni Malaysia Johor.',
       url: finalUrl,
       iconName: iconName || 'Music',
@@ -259,17 +345,97 @@ export const LinkEditorModal: React.FC<LinkEditorModalProps> = ({
               )}
             </div>
 
+            {/* Sub Kategori Dropdown & Tambah Baharu */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Sub Kategori (Pilihan)
-              </label>
-              <input
-                type="text"
-                value={subCategory}
-                onChange={(e) => setSubCategory(e.target.value)}
-                placeholder="Contoh: Muzik Tradisional / Tingkatan 5 / Sukan"
-                className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Sub Kategori (Pilihan)
+                </label>
+                {!isAddingNewSubCategory ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingNewSubCategory(true);
+                      setNewSubCategoryInput('');
+                    }}
+                    className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  >
+                    + Sub Kategori Baharu
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingNewSubCategory(false);
+                      setNewSubCategoryInput('');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                )}
+              </div>
+
+              {!isAddingNewSubCategory ? (
+                <select
+                  value={subCategory}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '__NEW_SUB_CATEGORY__') {
+                      setIsAddingNewSubCategory(true);
+                      setNewSubCategoryInput('');
+                    } else {
+                      setSubCategory(val);
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                >
+                  <option value="">(Tiada Sub Kategori)</option>
+                  <optgroup label="Senarai Sedia Ada">
+                    {subCategoryOptions.map((subCat) => (
+                      <option key={subCat} value={subCat}>
+                        {subCat}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Pilihan Tambahan">
+                    <option value="__NEW_SUB_CATEGORY__" className="text-blue-600 dark:text-blue-400 font-semibold">
+                      ➕ Tambah Sub Kategori Baharu...
+                    </option>
+                  </optgroup>
+                </select>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={newSubCategoryInput}
+                      onChange={(e) => setNewSubCategoryInput(e.target.value)}
+                      placeholder="Nama sub kategori baharu (cth: Muzik Moden)..."
+                      className="flex-1 px-3.5 py-2 rounded-lg bg-white dark:bg-slate-800 border border-blue-500 text-slate-900 dark:text-slate-100 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSaveNewSubCategory();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveNewSubCategory}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors shrink-0 cursor-pointer"
+                      title="Simpan Sub Kategori"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Simpan</span>
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400">
+                    Tekan 'Simpan' atau butang Enter untuk masukkan ke senarai pilihan dropdown.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
