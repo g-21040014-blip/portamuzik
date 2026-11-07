@@ -125,12 +125,22 @@ export default function App() {
       return DEFAULT_MASTER_GOOGLE_SHEET_URL;
     }
   });
+  const DELETED_LINKS_STORAGE_KEY = 'ssemj_deleted_link_ids_v2';
+  const [deletedLinkIds, setDeletedLinkIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('ssemj_deleted_link_ids_v2');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem(GOOGLE_SHEET_AUTOSYNC_STORAGE_KEY);
-      return stored !== 'false';
+      return stored === 'true'; // Default to false so user local edits are never overwritten by background sync
     } catch {
-      return true;
+      return false;
     }
   });
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
@@ -401,7 +411,46 @@ export default function App() {
     }
   }, [links]);
 
-  // Realtime synchronization: background polling (every 45s) and instant sync on window/tab focus
+  // Merge remote fetched links with local user additions/edits so user data is never lost
+  const mergeLinks = (prevLinks: AppLink[], fetchedLinks: AppLink[]): AppLink[] => {
+    // 1. Exclude any fetched link that was deleted locally by user
+    const validFetched = fetchedLinks.filter((fl) => !deletedLinkIds.includes(fl.id));
+
+    // 2. Map of user-modified links by ID and by alt key (title + url)
+    const modifiedMap = new Map<string, AppLink>();
+    prevLinks.forEach((pl) => {
+      if (pl.isLocallyModified) {
+        modifiedMap.set(pl.id, pl);
+        const altKey = `${pl.title.trim().toLowerCase()}:::${pl.url.trim()}`;
+        modifiedMap.set(altKey, pl);
+      }
+    });
+
+    // 3. Keep local custom links created by the user that aren't in the remote sheet
+    const localOnlyLinks = prevLinks.filter((pl) => {
+      if (deletedLinkIds.includes(pl.id)) return false;
+      const inFetched = validFetched.some(
+        (fl) =>
+          fl.id === pl.id ||
+          (fl.title.trim().toLowerCase() === pl.title.trim().toLowerCase() && fl.url.trim() === pl.url.trim())
+      );
+      return !inFetched;
+    });
+
+    // 4. For fetched links, prioritize local modifications if user edited them
+    const updatedFetched = validFetched.map((fl) => {
+      const byId = modifiedMap.get(fl.id);
+      if (byId) return byId;
+      const altKey = `${fl.title.trim().toLowerCase()}:::${fl.url.trim()}`;
+      const byKey = modifiedMap.get(altKey);
+      if (byKey) return byKey;
+      return fl;
+    });
+
+    return [...localOnlyLinks, ...updatedFetched];
+  };
+
+  // Realtime synchronization: background polling (only if user explicitly enables auto-sync)
   useEffect(() => {
     if (!autoSyncEnabled || !googleSheetUrl.trim()) return;
 
@@ -416,13 +465,14 @@ export default function App() {
 
         if (fetched && fetched.length > 0) {
           setLinks((prev) => {
+            const merged = mergeLinks(prev, fetched);
             const prevStr = JSON.stringify(prev);
-            const nextStr = JSON.stringify(fetched);
+            const nextStr = JSON.stringify(merged);
             if (prevStr !== nextStr) {
               try {
                 localStorage.setItem(STORAGE_KEY, nextStr);
               } catch {}
-              return fetched;
+              return merged;
             }
             return prev;
           });
@@ -437,29 +487,14 @@ export default function App() {
       }
     };
 
-    // Immediate initial sync
-    performSync();
-
-    // Polling interval every 45 seconds for live background sync
-    const intervalId = setInterval(performSync, 45000);
-
-    // Instant sync when returning to portal tab
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        performSync();
-      }
-    };
-
-    window.addEventListener('focus', performSync);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    // Polling interval every 60 seconds only when auto-sync is explicitly enabled
+    const intervalId = setInterval(performSync, 60000);
 
     return () => {
       isSubscribed = false;
       clearInterval(intervalId);
-      window.removeEventListener('focus', performSync);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [googleSheetUrl, autoSyncEnabled]);
+  }, [googleSheetUrl, autoSyncEnabled, deletedLinkIds]);
 
   const handleSaveGoogleSheetUrl = (url: string) => {
     setGoogleSheetUrl(url);
@@ -476,39 +511,74 @@ export default function App() {
   };
 
   const handleApplyGoogleSheetLinks = (newLinks: AppLink[]) => {
-    setLinks(newLinks);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newLinks));
-    } catch {}
+    setLinks((prev) => {
+      const merged = mergeLinks(prev, newLinks);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      } catch {}
+      return merged;
+    });
   };
 
   // Handlers for Links
   const handleSaveLink = (savedLink: AppLink) => {
+    const enrichedLink: AppLink = { ...savedLink, isLocallyModified: true };
     setLinks((prev) => {
-      const existingIdx = prev.findIndex((l) => l.id === savedLink.id);
+      const existingIdx = prev.findIndex((l) => l.id === enrichedLink.id);
+      let next: AppLink[];
       if (existingIdx >= 0) {
-        const next = [...prev];
-        next[existingIdx] = savedLink;
-        return next;
+        next = [...prev];
+        next[existingIdx] = enrichedLink;
+      } else {
+        next = [enrichedLink, ...prev];
       }
-      return [savedLink, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
     });
   };
 
   const handleDeleteLink = (id: string) => {
-    setLinks((prev) => prev.filter((l) => l.id !== id));
+    setLinks((prev) => {
+      const next = prev.filter((l) => l.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    setDeletedLinkIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      try {
+        localStorage.setItem(DELETED_LINKS_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   const handleToggleFavorite = (id: string) => {
-    setLinks((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, isFavorite: !l.isFavorite } : l))
-    );
+    setLinks((prev) => {
+      const next = prev.map((l) =>
+        l.id === id ? { ...l, isFavorite: !l.isFavorite, isLocallyModified: true } : l
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   const handleToggleActive = (id: string) => {
-    setLinks((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, isActive: !l.isActive } : l))
-    );
+    setLinks((prev) => {
+      const next = prev.map((l) =>
+        l.id === id ? { ...l, isActive: !l.isActive, isLocallyModified: true } : l
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   const handleMoveUp = (index: number) => {
@@ -606,6 +676,11 @@ export default function App() {
 
   const handleResetToDefaults = () => {
     setLinks(DEFAULT_SSEMJ_LINKS);
+    setDeletedLinkIds([]);
+    try {
+      localStorage.removeItem(DELETED_LINKS_STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_SSEMJ_LINKS));
+    } catch {}
   };
 
   const handleExportConfig = () => {

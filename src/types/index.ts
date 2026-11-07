@@ -25,6 +25,7 @@ export interface AppLink {
   target?: '_blank' | '_self';
   badgeText?: string;
   lastUpdated?: string;
+  isLocallyModified?: boolean;
 }
 
 export type ViewMode = 'accordion' | 'list' | 'grid';

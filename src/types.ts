@@ -36,6 +36,7 @@ export interface AppLink {
   badgeText?: string;
   lastUpdated?: string;
   customIconUrl?: string;
+  isLocallyModified?: boolean;
 }
 
 export interface SubLink {
