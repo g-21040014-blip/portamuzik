@@ -38,13 +38,13 @@ export const Header: React.FC<HeaderProps> = ({
   const getTabTitle = () => {
     switch (activeTab) {
       case 'dashboard':
-        return 'Papan Pemuka';
+        return 'Dashboard';
       case 'manage':
         return 'Pengurusan Pautan';
       case 'panduan':
         return 'Panduan Guru';
       default:
-        return 'Papan Pemuka';
+        return 'Dashboard';
     }
   };
 

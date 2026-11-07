@@ -15,6 +15,7 @@ import {
   Music,
   ExternalLink,
   ChevronRight,
+  ChevronLeft,
   Shield,
   Layers,
   Sparkles,
@@ -90,8 +91,8 @@ export default function App() {
   // Navigation active tab
   const [activeTab, setActiveTab] = useState<'dashboard' | 'manage' | 'panduan'>('dashboard');
 
-  // Sidebar collapsible & mobile drawer state
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Sidebar collapsible & mobile drawer state (Tutup/Kuncup secara lalai apabila aplikasi dibuka)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Fully customizable category list state (Tambah, Edit, Padam Kategori)
@@ -207,19 +208,8 @@ export default function App() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('accordion'); // Greenwich Accordion style as in reference image!
 
-  // Open / collapsed states for accordion categories
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => ({
-    'Kesenian & Muzik': true,
-    'Akademik & PdP': true,
-    'Hal Ehwal Murid': true,
-    'Kokurikulum': true,
-    'Aset & Fasiliti': true,
-    'Pentadbiran & Guru': true,
-    'PLC': true,
-    'Sk@S': true,
-    'OPR': true,
-    'Appsheet': true,
-  }));
+  // Open / collapsed states for accordion categories (Kuncup Semua secara lalai apabila aplikasi dibuka)
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   const handleToggleCategory = (catName: string) => {
     setOpenCategories((prev) => ({
@@ -239,6 +229,42 @@ export default function App() {
   const handleCollapseAll = () => {
     setOpenCategories({});
   };
+
+  // Category slidebar & navigation controls for PC mouse users
+  const categoryScrollRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkCategoryScroll = () => {
+    if (categoryScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = categoryScrollRef.current;
+      setCanScrollLeft(scrollLeft > 4);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
+    }
+  };
+
+  const handleScrollCategory = (direction: 'left' | 'right') => {
+    soundFx.playClick();
+    if (categoryScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -240 : 240;
+      categoryScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setTimeout(checkCategoryScroll, 320);
+    }
+  };
+
+  const handleCategoryWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY !== 0 && categoryScrollRef.current) {
+      categoryScrollRef.current.scrollLeft += e.deltaY;
+      checkCategoryScroll();
+    }
+  };
+
+  useEffect(() => {
+    checkCategoryScroll();
+    const handleResize = () => checkCategoryScroll();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [categoriesList]);
 
   // Dynamic merged category items (standard + customized categories from state & links)
   const allCategoryItems = useMemo(() => {
@@ -1084,28 +1110,64 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Category Segmented Filter Buttons */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                  {allCategoryItems.map((cat) => {
-                    const isSelected = selectedCategory === cat.value;
-                    return (
-                      <button
-                        key={cat.value}
-                        type="button"
-                        onClick={() => {
-                          soundFx.playClick();
-                          setSelectedCategory(cat.value as CategoryType);
-                        }}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 border ${
-                          isSelected
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-semibold'
-                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-850'
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
-                    );
-                  })}
+                {/* Category Segmented Filter Buttons with Slidebar & Slider Controls for PC Mouse */}
+                <div className="relative flex items-center">
+                  {/* Left Arrow Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleScrollCategory('left')}
+                    disabled={!canScrollLeft}
+                    aria-label="Skrol kategori ke kiri"
+                    title="Skrol kategori ke kiri"
+                    className={`absolute -left-3 z-10 p-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-600 transition-all cursor-pointer ${
+                      canScrollLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Category Buttons Container with Mouse Wheel & Visible Drag Slidebar */}
+                  <div
+                    ref={categoryScrollRef}
+                    onScroll={checkCategoryScroll}
+                    onWheel={handleCategoryWheel}
+                    className="category-slidebar flex items-center gap-1.5 overflow-x-auto pb-2 pt-1 px-1 w-full scroll-smooth"
+                  >
+                    {allCategoryItems.map((cat) => {
+                      const isSelected = selectedCategory === cat.value;
+                      return (
+                        <button
+                          key={cat.value}
+                          type="button"
+                          onClick={() => {
+                            soundFx.playClick();
+                            setSelectedCategory(cat.value as CategoryType);
+                          }}
+                          className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 border cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-semibold'
+                              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-850'
+                          }`}
+                        >
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Right Arrow Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleScrollCategory('right')}
+                    disabled={!canScrollRight}
+                    aria-label="Skrol kategori ke kanan"
+                    title="Skrol kategori ke kanan"
+                    className={`absolute -right-3 z-10 p-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-600 transition-all cursor-pointer ${
+                      canScrollRight ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
@@ -1193,9 +1255,9 @@ export default function App() {
                             soundFx.playClick();
                             handleExpandAll();
                           }}
-                          className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                          className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                         >
-                          Buka Semua
+                          Kembang Semua
                         </button>
                         <span className="text-slate-300 dark:text-slate-700">·</span>
                         <button
@@ -1381,7 +1443,7 @@ export default function App() {
                 onClick={() => setActiveTab('dashboard')}
                 className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
-                Papan Pemuka
+                Dashboard
               </button>
               <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
               <button

@@ -73,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     {
       id: 'dashboard' as const,
-      label: 'Papan Pemuka',
+      label: 'Dashboard',
       icon: LayoutDashboard,
       badge: totalLinksCount > 0 ? String(totalLinksCount) : undefined,
     },
