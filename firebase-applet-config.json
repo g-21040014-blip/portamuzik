@@ -1,11 +1,12 @@
 {
-  "projectId": "gen-lang-client-0401558447",
-  "appId": "1:433369615577:web:71b0527d6df3f13fbcc2c8",
-  "apiKey": "AIzaSyC-nP_sg3SYpU_IgzcPkbsMgz0SH4sM7Vs",
-  "authDomain": "gen-lang-client-0401558447.firebaseapp.com",
-  "storageBucket": "gen-lang-client-0401558447.firebasestorage.app",
-  "messagingSenderId": "433369615577",
+  "projectId": "clever-bounty-322308",
+  "appId": "1:721640810073:web:2b2f8a290d5ab7f7c7b348",
+  "apiKey": "AIzaSyDRr4_Y0IdYx6DnIlasJfSVwVNDummnrcM",
+  "authDomain": "clever-bounty-322308.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-portamuzik-8649ecc3-d655-4e38-be6b-a6ba227ecc78",
+  "storageBucket": "clever-bounty-322308.firebasestorage.app",
+  "messagingSenderId": "721640810073",
   "measurementId": "",
-  "oAuthClientId": "433369615577-7k94crhhn35nkq7ftqamettgvm7ulkj2.apps.googleusercontent.com",
+  "oAuthClientId": "721640810073-g12qq5h89mkcs09ku57jc44un4oodqpt.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

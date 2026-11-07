@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidLink(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'url']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 100 &&
+             data.url is string && data.url.size() > 0 && data.url.size() <= 2048 &&
+             (!('subCategory' in data) || (data.subCategory is string && data.subCategory.size() <= 100)) &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+             (!('iconName' in data) || (data.iconName is string && data.iconName.size() <= 100)) &&
+             (!('color' in data) || (data.color is string && data.color.size() <= 50)) &&
+             (!('isFavorite' in data) || (data.isFavorite is bool)) &&
+             (!('isActive' in data) || (data.isActive is bool)) &&
+             (!('badgeText' in data) || (data.badgeText is string && data.badgeText.size() <= 100)) &&
+             (!('order' in data) || (data.order is number)) &&
+             (!('lastUpdated' in data) || (data.lastUpdated is string && data.lastUpdated.size() <= 50));
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             (!('order' in data) || (data.order is number));
+    }
+
+    match /links/{linkId} {
+      allow read: if true;
+      allow create: if isValidId(linkId) && isValidLink(incoming());
+      allow update: if isValidId(linkId) && isValidLink(incoming());
+      allow delete: if isValidId(linkId);
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create: if isValidId(categoryId) && isValidCategory(incoming());
+      allow update: if isValidId(categoryId) && isValidCategory(incoming());
+      allow delete: if isValidId(categoryId);
+    }
+  }
+}

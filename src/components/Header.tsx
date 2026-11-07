@@ -21,6 +21,7 @@ interface HeaderProps {
   isAudioOn: boolean;
   setIsAudioOn: (on: boolean) => void;
   onToggleMobileSidebar: () => void;
+  isCloudSynced?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -32,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   isAudioOn,
   setIsAudioOn,
   onToggleMobileSidebar,
+  isCloudSynced = false,
 }) => {
   const getTabTitle = () => {
     switch (activeTab) {
@@ -76,6 +78,16 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Actions & Tools */}
       <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        {isCloudSynced && (
+          <div
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-medium"
+            title="Pangkalan data awan Firebase Firestore aktif & terselaras secara langsung"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Awan Langsung</span>
+          </div>
+        )}
+
         {/* Audio Chime Feedback Toggle */}
         <button
           type="button"

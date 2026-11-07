@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "Link": {
+      "title": "Link",
+      "description": "Portal link resource for SSeMJ Music Management Portal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 100 },
+        "subCategory": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "url": { "type": "string", "maxLength": 2048 },
+        "iconName": { "type": "string", "maxLength": 100 },
+        "color": { "type": "string", "maxLength": 50 },
+        "isFavorite": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "badgeText": { "type": "string", "maxLength": 100 },
+        "order": { "type": "number" },
+        "lastUpdated": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "title", "category", "url"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Portal category definition",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "order": { "type": "number" }
+      },
+      "required": ["name"]
+    }
+  },
+  "firestore": {
+    "/links/{linkId}": {
+      "schema": "Link",
+      "description": "Shared real-time links collection accessible by all SSeMJ portal users"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Shared portal categories"
+    }
+  }
+}

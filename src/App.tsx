@@ -43,6 +43,16 @@ import { GoogleSheetSyncModal } from './components/GoogleSheetSyncModal';
 import { soundFx } from './utils/audio';
 import { getCategoryIcon } from './utils/categoryIcons';
 import { fetchLinksFromGoogleSheet, DEFAULT_MASTER_GOOGLE_SHEET_URL } from './utils/csvHelper';
+import {
+  subscribeToLinks,
+  saveLinkToFirestore,
+  deleteLinkFromFirestore,
+  subscribeToCategories,
+  saveCategoryToFirestore,
+  deleteCategoryFromFirestore,
+  seedInitialLinksIfEmpty,
+  testConnection,
+} from './services/firebase';
 
 const STORAGE_KEY = 'ssemj_muzik_links_v5';
 const CATEGORY_STORAGE_KEY = 'ssemj_custom_categories_v1';
@@ -146,6 +156,7 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncedTime, setLastSyncedTime] = useState<Date | null>(null);
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
 
   // Application links state initialized from localStorage
   const [links, setLinks] = useState<AppLink[]>(() => {
@@ -290,6 +301,7 @@ export default function App() {
       } catch {}
       return next;
     });
+    saveCategoryToFirestore(trimmed).catch(() => {});
   };
 
   const handleAddNewCategory = handleAddCategory; // Backward compatibility
@@ -304,12 +316,19 @@ export default function App() {
       } catch {}
       return next;
     });
+    saveCategoryToFirestore(trimmed).catch(() => {});
+    deleteCategoryFromFirestore(oldName).catch(() => {});
 
     // Update all links under this category
     setLinks((prev) => {
-      const updated = prev.map((l) =>
-        l.category === oldName ? { ...l, category: trimmed as CategoryType } : l
-      );
+      const updated = prev.map((l) => {
+        if (l.category === oldName) {
+          const mod = { ...l, category: trimmed as CategoryType };
+          saveLinkToFirestore(mod).catch(() => {});
+          return mod;
+        }
+        return l;
+      });
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       } catch {}
@@ -329,12 +348,18 @@ export default function App() {
       } catch {}
       return next;
     });
+    deleteCategoryFromFirestore(catToDelete).catch(() => {});
 
     // Migrate links under deleted category to fallback
     setLinks((prev) => {
-      const updated = prev.map((l) =>
-        l.category === catToDelete ? { ...l, category: fallbackCategory as CategoryType } : l
-      );
+      const updated = prev.map((l) => {
+        if (l.category === catToDelete) {
+          const mod = { ...l, category: fallbackCategory as CategoryType };
+          saveLinkToFirestore(mod).catch(() => {});
+          return mod;
+        }
+        return l;
+      });
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       } catch {}
@@ -402,14 +427,52 @@ export default function App() {
     }
   }, []);
 
-  // Sync links to localStorage
+  // Real-time Cloud Synchronization via Firebase Firestore
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
-    } catch {
-      // Storage quota or private browsing
-    }
-  }, [links]);
+    let unsubscribeLinks: (() => void) | null = null;
+    let unsubscribeCats: (() => void) | null = null;
+
+    const initFirebase = async () => {
+      try {
+        await testConnection();
+        // Seed initial links to Firestore if cloud collection is empty
+        await seedInitialLinksIfEmpty(links.length > 0 ? links : DEFAULT_SSEMJ_LINKS);
+
+        // Listen to live links changes across all users and devices
+        unsubscribeLinks = subscribeToLinks((cloudLinks) => {
+          if (cloudLinks && cloudLinks.length > 0) {
+            setLinks(cloudLinks);
+            setIsCloudSynced(true);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudLinks));
+            } catch {}
+          }
+        });
+
+        // Listen to live custom categories
+        unsubscribeCats = subscribeToCategories((cloudCats) => {
+          if (cloudCats && cloudCats.length > 0) {
+            setCategoriesList((prev) => {
+              const combined = [...prev];
+              cloudCats.forEach((c) => {
+                if (!combined.includes(c) && !isBannedCategory(c)) combined.push(c);
+              });
+              return combined;
+            });
+          }
+        });
+      } catch (err) {
+        console.warn('Firebase initialization error, running in local mode:', err);
+      }
+    };
+
+    initFirebase();
+
+    return () => {
+      if (unsubscribeLinks) unsubscribeLinks();
+      if (unsubscribeCats) unsubscribeCats();
+    };
+  }, []);
 
   // Merge remote fetched links with local user additions/edits so user data is never lost
   const mergeLinks = (prevLinks: AppLink[], fetchedLinks: AppLink[]): AppLink[] => {
@@ -537,6 +600,11 @@ export default function App() {
       } catch {}
       return next;
     });
+
+    // Real-time Cloud Firestore save
+    saveLinkToFirestore(enrichedLink).catch((err) => {
+      console.warn('Gagal menyimpan pautan ke Firestore:', err);
+    });
   };
 
   const handleDeleteLink = (id: string) => {
@@ -555,13 +623,23 @@ export default function App() {
       } catch {}
       return next;
     });
+
+    // Real-time Cloud Firestore delete
+    deleteLinkFromFirestore(id).catch((err) => {
+      console.warn('Gagal memadam pautan dari Firestore:', err);
+    });
   };
 
   const handleToggleFavorite = (id: string) => {
     setLinks((prev) => {
-      const next = prev.map((l) =>
-        l.id === id ? { ...l, isFavorite: !l.isFavorite, isLocallyModified: true } : l
-      );
+      const next = prev.map((l) => {
+        if (l.id === id) {
+          const updated = { ...l, isFavorite: !l.isFavorite, isLocallyModified: true };
+          saveLinkToFirestore(updated).catch(() => {});
+          return updated;
+        }
+        return l;
+      });
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       } catch {}
@@ -571,9 +649,14 @@ export default function App() {
 
   const handleToggleActive = (id: string) => {
     setLinks((prev) => {
-      const next = prev.map((l) =>
-        l.id === id ? { ...l, isActive: !l.isActive, isLocallyModified: true } : l
-      );
+      const next = prev.map((l) => {
+        if (l.id === id) {
+          const updated = { ...l, isActive: !l.isActive, isLocallyModified: true };
+          saveLinkToFirestore(updated).catch(() => {});
+          return updated;
+        }
+        return l;
+      });
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       } catch {}
@@ -837,6 +920,7 @@ export default function App() {
           isAudioOn={isAudioOn}
           setIsAudioOn={setIsAudioOn}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
+          isCloudSynced={isCloudSynced}
         />
 
         {/* Global Announcement Banner */}
